@@ -1,8 +1,7 @@
 import React from 'react';
-import { ListItem, ListItemText, IconButton } from '@mui/material';
+import { ListItem, ListItemText, IconButton, ListItemButton } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-import AudioPlayer from './AudioPlayer';
 
 interface Track {
   id: number;
@@ -16,23 +15,23 @@ interface Track {
 interface TrackListItemProps {
   track: Track;
   isPlaying: boolean;
-  onPlayPause: (trackId: number) => void;
-  onAudioEnded: () => void;
+  onTrackSelect: (track: Track) => void;
 }
 
-const TrackListItem: React.FC<TrackListItemProps> = ({ track, isPlaying, onPlayPause, onAudioEnded }) => {
+const TrackListItem: React.FC<TrackListItemProps> = ({ track, isPlaying, onTrackSelect }) => {
   return (
-    <ListItem key={track.id} secondaryAction={
-      <IconButton edge="end" aria-label="play/pause" onClick={() => onPlayPause(track.id)}>
-        {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
-      </IconButton>
-    }>
-      <ListItemText primary={track.title} secondary={track.artist.name} />
-      <AudioPlayer
-        src={track.preview}
-        isPlaying={isPlaying}
-        onEnded={onAudioEnded}
-      />
+    <ListItem
+      key={track.id}
+      disablePadding
+      secondaryAction={
+        <IconButton edge="end" aria-label="play/pause" onClick={() => onTrackSelect(track)}>
+          {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+        </IconButton>
+      }
+    >
+      <ListItemButton onClick={() => onTrackSelect(track)}>
+        <ListItemText primary={track.title} secondary={track.artist.name} />
+      </ListItemButton>
     </ListItem>
   );
 };

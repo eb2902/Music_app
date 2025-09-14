@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { AppBar, Toolbar, Typography, Container, Box, CircularProgress, List, TextField, InputAdornment } from '@mui/material';
+import React, { useEffect, useState, useRef } from 'react';
+import { AppBar, Toolbar, Typography, Container, Box, CircularProgress, List, TextField, InputAdornment, Paper, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
 import { fetchDeezerData } from './api/deezer';
-import TrackListItem from './components/TrackListItem'; // Import the new component
+import TrackListItem from './components/TrackListItem';
+import AudioPlayer from './components/AudioPlayer';
 import './App.css';
 
 interface Track {
@@ -11,17 +14,18 @@ interface Track {
   artist: {
     name: string;
   };
-  preview: string; // Add preview URL
+  preview: string;
 }
 
 function App() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [playingTrackId, setPlayingTrackId] = useState<number | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
-
+  const audioPlayerRef = useRef<HTMLAudioElement>(null);
   // Debounce search term
   useEffect(() => {
     const timerId = setTimeout(() => {
@@ -61,8 +65,36 @@ function App() {
     setSearchTerm(event.target.value);
   };
 
-  const handlePlayPause = (trackId: number) => {
-    setPlayingTrackId(prevId => (prevId === trackId ? null : trackId));
+  const handleTrackSelect = (track: Track) => {
+    if (currentTrack && currentTrack.id === track.id) {
+      // Toggle play/pause for the current track
+      if (isPlaying) {
+        audioPlayerRef.current?.pause();
+      } else {
+        audioPlayerRef.current?.play();
+      }
+      setIsPlaying(!isPlaying);
+    } else {
+      // Change track
+      setCurrentTrack(track);
+      setIsPlaying(true); // Auto-play new track
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (currentTrack) {
+      if (isPlaying) {
+        audioPlayerRef.current?.pause();
+      } else {
+        audioPlayerRef.current?.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    // Optional: play next song
   };
 
   return (
@@ -74,9 +106,9 @@ function App() {
           </Typography>
         </Toolbar>
       </AppBar>
-      <Container component="main" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
+      <Container component="main" sx={{ mt: 4, mb: 12, flexGrow: 1 }}> {/* Add margin-bottom */}
         <Typography variant="h4" component="h1" gutterBottom>
-          Music App
+          Discover Music
         </Typography>
         <Box sx={{ mb: 3 }}>
           <TextField
@@ -106,14 +138,36 @@ function App() {
               <TrackListItem
                 key={track.id}
                 track={track}
-                isPlaying={playingTrackId === track.id}
-                onPlayPause={handlePlayPause}
-                onAudioEnded={() => setPlayingTrackId(null)}
+                isPlaying={currentTrack?.id === track.id && isPlaying}
+                onTrackSelect={handleTrackSelect}
               />
             ))}
           </List>
         )}
       </Container>
+
+      {currentTrack && (
+        <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, p: 2, display: 'flex', alignItems: 'center' }} elevation={3}>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="subtitle1">{currentTrack.title}</Typography>
+            <Typography variant="caption" color="text.secondary">{currentTrack.artist.name}</Typography>
+          </Box>
+          <IconButton onClick={handlePlayPause}>
+            {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+          </IconButton>
+        </Paper>
+      )}
+
+      {currentTrack && (
+        <AudioPlayer
+          ref={audioPlayerRef}
+          src={currentTrack.preview}
+          isPlaying={isPlaying}
+          onEnded={handleAudioEnded}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+        />
+      )}
     </Box>
   );
 }
